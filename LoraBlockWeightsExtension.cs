@@ -5,7 +5,7 @@ using SwarmUI.Core;
 using SwarmUI.Text2Image;
 using SwarmUI.Utils;
 
-namespace Kostenickj.LoraBlockWeightsExtension;
+namespace Kostenickj.Extensions.LoraBlockWeightsExtension;
 
 public class LoraBlockWeightsExtension : Extension
 {
@@ -17,6 +17,7 @@ public class LoraBlockWeightsExtension : Extension
 
     public override void OnInit()
     {
+        Logs.Info("LoraBlockWeightsExtension has started.");
         // Add the installable info for the comfy node backend
         InstallableFeatures.RegisterInstallableFeature(new("Lora Loader (Block Weight)", "lora_block_weights_loader", "https://github.com/ltdrdata/ComfyUI-Inspire-Pack", "ltdrdata", "This will install Comfy UI Inspire pack by ltdrdata.\nDo you wish to install?"));
         // Add the JS file, which manages the install button for the comfy node
