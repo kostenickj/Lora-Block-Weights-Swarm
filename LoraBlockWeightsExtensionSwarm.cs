@@ -5,7 +5,7 @@ using SwarmUI.Core;
 using SwarmUI.Text2Image;
 using SwarmUI.Utils;
 
-namespace SwarmUI.LoraBlockWeightsExtension;
+namespace Kostenickj.LoraBlockWeightsExtension;
 
 public class LoraBlockWeightsExtension : Extension
 {
@@ -25,13 +25,13 @@ public class LoraBlockWeightsExtension : Extension
         ComfyUIBackendExtension.NodeToFeatureMap["LoraLoaderBlockWeight //Inspire"] = "lora_block_weights_loader";
         // Build the actual parameters list for inside SwarmUI, note the usage of the feature flag defined above
         LoraBlockLoaderGroup = new("Lora Loader (Block Weight)", Toggles: true, Open: false, IsAdvanced: true);
-        
+
         StrengthClip = T2IParamTypes.Register<double>(new("[LBW] Clip Strength", "[Lora Loader (Block Weight)]\n. Lora Clip Strength",
             "1", Group: LoraBlockLoaderGroup, FeatureFlag: "lora_block_weights_loader", OrderPriority: 1,
             Examples: ["0", "1", ".75"]
             ));
 
-        StrengthModel = T2IParamTypes.Register<double>(new("[LBW] Clip Strength", "[Lora Loader (Block Weight)]\n. Lora Model Strength",
+        StrengthModel = T2IParamTypes.Register<double>(new("[LBW] Model Strength", "[Lora Loader (Block Weight)]\n. Lora Model Strength",
              "1", Group: LoraBlockLoaderGroup, FeatureFlag: "lora_block_weights_loader", OrderPriority: 1,
              Examples: ["0", "1", ".75"]
          ));
@@ -56,68 +56,39 @@ public class LoraBlockWeightsExtension : Extension
             "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1", Group: LoraBlockLoaderGroup, FeatureFlag: "lora_block_weights_loader",
             OrderPriority: 3
       ));
-        // CFGScaleMin = T2IParamTypes.Register<double>(new("[DT] CFG Scale Minimum", "[Dynamic Thresholding]\nCFG Scale minimum value (for non-constant CFG mode).",
-        //     "0", Min: 0, Max: 100, Group: DynThreshGroup, FeatureFlag: "dynamic_thresholding", OrderPriority: 4,
-        //     Examples: ["0", "1", "2", "5"]
-        //     ));
-        // MimicScaleMode = T2IParamTypes.Register<string>(new("[DT] Mimic Scale Mode", "[Dynamic Thresholding]\nMode for the Mimic Scale scheduler.",
-        //     "Constant", Group: DynThreshGroup, FeatureFlag: "dynamic_thresholding", OrderPriority: 5,
-        //     GetValues: (_) => ["Constant", "Linear Down", "Half Cosine Down", "Cosine Down", "Linear Up", "Half Cosine Up", "Cosine Up", "Power Up", "Power Down", "Linear Repeating", "Cosine Repeating"]
-        //     ));
-        // MimicScaleMin = T2IParamTypes.Register<double>(new("[DT] Mimic Scale Minimum", "[Dynamic Thresholding]\nMimic Scale minimum value (for non-constant mimic mode).",
-        //     "0", Min: 0, Max: 100, Group: DynThreshGroup, FeatureFlag: "dynamic_thresholding", OrderPriority: 6,
-        //     Examples: ["0", "1", "2", "5"]
-        //     ));
-        // SchedulerValue = T2IParamTypes.Register<double>(new("[DT] Scheduler Value", "[Dynamic Thresholding]\nIf either scale scheduler is 'Power', this is the power factor.\nIf using 'repeating', this is the number of repeats per image. Otherwise, it does nothing.",
-        //     "4", Group: DynThreshGroup, FeatureFlag: "dynamic_thresholding", OrderPriority: 7,
-        //     Examples: ["2", "4", "8"]
-        //     ));
-        // SeparateFeatureChannels = T2IParamTypes.Register<bool>(new("[DT] Separate Feature Channels", "[Dynamic Thresholding]\nWhether to separate the feature channels.\nNormally leave this on. I think it should be off for RCFG?",
-        //     "true", Group: DynThreshGroup, FeatureFlag: "dynamic_thresholding", OrderPriority: 8
-        //     ));
-        // ScalingStartpoint = T2IParamTypes.Register<string>(new("[DT] Scaling Startpoint", "[Dynamic Thresholding]\nWhether to scale relative to the mean value or to zero.\nUse 'MEAN' normally. If you want RCFG logic, use 'ZERO'.",
-        //     "MEAN", Group: DynThreshGroup, FeatureFlag: "dynamic_thresholding", OrderPriority: 9, GetValues: (_) => ["MEAN", "ZERO"]
-        //     ));
-        // VariabilityMeasure = T2IParamTypes.Register<string>(new("[DT] Variability Measure", "[Dynamic Thresholding]\nWhether to use standard deviation ('STD') or thresholded absolute values ('AD').\nNormally use 'AD'. Use 'STD' if wanting RCFG logic.",
-        //     "AD", Group: DynThreshGroup, FeatureFlag: "dynamic_thresholding", OrderPriority: 10, GetValues: (_) => ["AD", "STD"]
-        //     ));
-        // InterpolatePhi = T2IParamTypes.Register<double>(new("[DT] Interpolate Phi", "[Dynamic Thresholding]\n'phi' interpolation factor.\nInterpolates between original value and DT value, such that 0.0 = use original, and 1.0 = use DT.\n(This exists because RCFG is bad and so half-removing it un-breaks it - better to just not do RCFG).",
-        //     "1", Min: 0, Max: 1, Step: 0.05, Group: DynThreshGroup, FeatureFlag: "dynamic_thresholding", OrderPriority: 11,
-        //     Examples: ["0", "0.25", "0.5", "0.75", "1"]
-        //     ));
-        // The actual implementation: add the node as a step in the workflow generator.
-        WorkflowGenerator.AddStep(g =>
+
+        WorkflowGenerator.AddModelGenStep(g =>
         {
             // Only activate if parameters are used - because the whole group toggles as once, any one parameter being set indicates the full set is valid (excluding corrupted API calls)
-            if (g.UserInput.TryGet(Weights, out string weights))
+            if (g.UserInput.TryGet(LoraName, out string loraName))
             {
                 // This shouldn't be possible outside of corrupt API calls, but check just to be safe
                 if (!g.Features.Contains("lora_block_weights_loader"))
                 {
                     throw new SwarmUserErrorException("Lora Block Weights Loader, but feature isn't installed");
                 }
+
+                if (String.IsNullOrEmpty(loraName))
+                {
+                    throw new SwarmUserErrorException("Lora Block Weights Loader: loraName is required");
+                }
+
                 string newNode = g.CreateNode("LoraLoaderBlockWeight //Inspire", new JObject()
                 {
                     ["model"] = g.FinalModel,
-                    ["mimic_scale"] = mimicScale,
-                    ["threshold_percentile"] = g.UserInput.Get(ThresholdPercentile),
-                    ["mimic_mode"] = g.UserInput.Get(MimicScaleMode),
-                    ["mimic_scale_min"] = g.UserInput.Get(MimicScaleMin),
-                    ["cfg_mode"] = g.UserInput.Get(CFGScaleMode),
-                    ["cfg_scale_min"] = g.UserInput.Get(CFGScaleMin),
-                    ["sched_val"] = g.UserInput.Get(SchedulerValue),
-                    ["separate_feature_channels"] = g.UserInput.Get(SeparateFeatureChannels) ? "enable" : "disable",
-                    ["scaling_startpoint"] = g.UserInput.Get(ScalingStartpoint),
-                    ["variability_measure"] = g.UserInput.Get(VariabilityMeasure),
-                    ["interpolate_phi"] = g.UserInput.Get(InterpolatePhi)
+                    ["clip"] = g.FinalClip,
+                    ["lora_name"] = loraName,
+                    ["strength_model"] = g.UserInput.Get(StrengthModel),
+                    ["strength_clip"] = g.UserInput.Get(StrengthClip),
+                    ["A"] = g.UserInput.Get(A),
+                    ["B"] = g.UserInput.Get(B),
+                    ["block_vector"] = g.UserInput.Get(Weights),
                 });
                 // Workflow additions generally only do anything if a key passthrough field is updated.
                 // In our case, we're replacing the Model node, so update FinalModel to point at our node's output.
                 g.FinalModel = [newNode, 0];
             }
             // See WorkflowGeneratorSteps for definition of the priority values.
-            // JAKETODO, ask monkey what number i should use here for lora...
-            // -5.5 puts this before the main Sampler, but after most other model changes (eg controlnet)
-        }, -5.5);
+        }, -14.5);
     }
 }
