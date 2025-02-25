@@ -58,7 +58,8 @@ public class LoraBlockWeightsExtension : Extension
             OrderPriority: 3
       ));
 
-        WorkflowGenerator.AddModelGenStep(g =>
+        // TODO, not sure if this needs to be a model gen step or regular step....
+        WorkflowGenerator.AddStep(g =>
         {
             // Only activate if parameters are used - because the whole group toggles as once, any one parameter being set indicates the full set is valid (excluding corrupted API calls)
             if (g.UserInput.TryGet(LoraName, out string loraName))
@@ -69,10 +70,14 @@ public class LoraBlockWeightsExtension : Extension
                     throw new SwarmUserErrorException("Lora Block Weights Loader, but feature isn't installed");
                 }
 
+
+
                 if (String.IsNullOrEmpty(loraName))
                 {
                     throw new SwarmUserErrorException("Lora Block Weights Loader: loraName is required");
                 }
+
+                Logs.Info("Lora Name" + loraName);
 
                 string newNode = g.CreateNode("LoraLoaderBlockWeight //Inspire", new JObject()
                 {
@@ -84,6 +89,9 @@ public class LoraBlockWeightsExtension : Extension
                     ["A"] = g.UserInput.Get(A),
                     ["B"] = g.UserInput.Get(B),
                     ["block_vector"] = g.UserInput.Get(Weights),
+                    ["inverse"] = false,
+                    ["seed"] = 0,
+                    ["preset"] = "FLUX-DBL-ALL:1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1"
                 });
                 // Workflow additions generally only do anything if a key passthrough field is updated.
                 // In our case, we're replacing the Model node, so update FinalModel to point at our node's output.
