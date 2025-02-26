@@ -70,20 +70,19 @@ public class LoraBlockWeightsExtension : Extension
                     throw new SwarmUserErrorException("Lora Block Weights Loader, but feature isn't installed");
                 }
 
-
-
                 if (String.IsNullOrEmpty(loraName))
                 {
                     throw new SwarmUserErrorException("Lora Block Weights Loader: loraName is required");
                 }
 
                 Logs.Info("Lora Name" + loraName);
+                var loraNameSafetensors = loraName + ".safetensors";
 
                 string newNode = g.CreateNode("LoraLoaderBlockWeight //Inspire", new JObject()
                 {
                     ["model"] = g.FinalModel,
                     ["clip"] = g.FinalClip,
-                    ["lora_name"] = loraName,
+                    ["lora_name"] = loraNameSafetensors,
                     ["strength_model"] = g.UserInput.Get(StrengthModel),
                     ["strength_clip"] = g.UserInput.Get(StrengthClip),
                     ["A"] = g.UserInput.Get(A),
